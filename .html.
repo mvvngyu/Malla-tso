@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Malla Trabajo Social UST</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f6f8fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #2c3e50;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 12px;
+    }
+
+    .semester {
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+    }
+
+    .semester h3 {
+      text-align: center;
+      font-size: 1em;
+      margin-bottom: 8px;
+      color: #2980b9;
+    }
+
+    .course {
+      background: #ecf0f1;
+      margin: 6px 0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9em;
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .course.approved {
+      background: #2ecc71;
+      color: white;
+      text-decoration: line-through;
+    }
+
+    .course.locked {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .course.locked:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 105%;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #333;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-size: 0.8em;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Malla Curricular Trabajo Social - UST</h1>
+<div class="grid" id="malla"></div>
+
+<script>
+const cursos = [
+  // Solo una parte como ejemplo, puedes extender con todos los cursos del PDF
+  { id: '01', nombre: 'Acercamiento Profesional', semestre: 1 },
+  { id: '02', nombre: 'Fundamentos del Trabajo Social', semestre: 1 },
+  { id: '03', nombre: 'Historia Social de Chile Contemporáneo', semestre: 1 },
+  { id: '04', nombre: 'Pensamiento Matemático para las Ciencias Sociales', semestre: 1 },
+
+  { id: '05', nombre: 'Teoría de la Intervención Social', semestre: 2, requisitos: ['01'] },
+  { id: '06', nombre: 'Teorías de Justicia Social', semestre: 2, requisitos: ['02'] },
+  { id: '07', nombre: 'Inglés I', semestre: 2 },
+
+  { id: '08', nombre: 'Desarrollo de Competencias Profesionales', semestre: 3, requisitos: ['05'] },
+  { id: '09', nombre: 'Paradigmas Teóricos de Problemas Sociales I', semestre: 3 },
+  { id: '10', nombre: 'Inglés II', semestre: 3, requisitos: ['07'] },
+
+  // Agrega todos los cursos del PDF con su ID, semestre y requisitos aquí...
+];
+
+function cargarMalla() {
+  const contenedor = document.getElementById('malla');
+  for (let i = 1; i <= 10; i++) {
+    const col = document.createElement('div');
+    col.className = 'semester';
+    col.innerHTML = `<h3>Semestre ${i}</h3>`;
+    cursos.filter(c => c.semestre === i).forEach(curso => {
+      const div = document.createElement('div');
+      div.className = 'course';
+      div.textContent = curso.nombre;
+      div.dataset.id = curso.id;
+      if (curso.requisitos) div.dataset.requisitos = curso.requisitos.join(',');
+      col.appendChild(div);
+    });
+    contenedor.appendChild(col);
+  }
+}
+
+function actualizarEstado() {
+  document.querySelectorAll('.course').forEach(div => {
+    const id = div.dataset.id;
+    const aprobadas = JSON.parse(localStorage.getItem('cursos_aprobados') || '[]');
+    const requisitos = div.dataset.requisitos ? div.dataset.requisitos.split(',') : [];
+    const faltan = requisitos.filter(r => !aprobadas.includes(r));
+
+    div.classList.remove('approved', 'locked');
+    div.removeAttribute('data-tooltip');
+
+    if (aprobadas.includes(id)) {
+      div.classList.add('approved');
+    } else if (faltan.length) {
+      div.classList.add('locked');
+      const nombres = cursos.filter(c => faltan.includes(c.id)).map(c => c.nombre);
+      div.setAttribute('data-tooltip', 'Faltan: ' + nombres.join(', '));
+    }
+  });
+}
+
+function manejarClick() {
+  document.querySelectorAll('.course').forEach(div => {
+    div.addEventListener('click', () => {
+      if (div.classList.contains('locked')) return;
+      const id = div.dataset.id;
+      let aprobadas = JSON.parse(localStorage.getItem('cursos_aprobados') || '[]');
+      if (aprobadas.includes(id)) {
+        aprobadas = aprobadas.filter(x => x !== id);
+      } else {
+        aprobadas.push(id);
+      }
+      localStorage.setItem('cursos_aprobados', JSON.stringify(aprobadas));
+      actualizarEstado();
+    });
+  });
+}
+
+cargarMalla();
+actualizarEstado();
+manejarClick();
+</script>
+</body>
+</html>
